@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type Route struct {
@@ -24,6 +27,7 @@ func main() {
 	}
 
 	var routes []Route
+	router := mux.NewRouter()
 	err = json.Unmarshal(data, &routes)
 	if err != nil {
 		fmt.Println("json failed", err)
@@ -32,11 +36,19 @@ func main() {
 
 	for _, route := range routes {
 		handler := createHandler(route)
-		http.HandleFunc(route.Path, handler)
+		router.HandleFunc(route.Path, handler)
 	}
 
+	cor := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: false,
+		AllowedHeaders:   []string{"*"},
+	})
+
+	corHandler := cor.Handler(router)
+
 	fmt.Println("listening :8080")
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", corHandler)
 }
 
 func createHandler(route Route) http.HandlerFunc {
